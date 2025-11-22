@@ -5,4 +5,4 @@ It provides a **single dedicated notes panel** capable of:
 
 - Per-project notes (stored externally)
 - Viewing any `.md` file in a readable, styled mode
-- editing a `.md` file by double clicking the notes panel
+- editing an `.md` file by double clicking the notes panel
