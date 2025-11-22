@@ -60,19 +60,35 @@ end
 -- NOTE VIEW SWAP HELPERS (Reader <-> Editor in the same node)
 ----------------------------------------------------------------------
 
--- Replace the current active LiteNotes view (reader/editor) with another
+-- Replace the current LiteNotes view (reader/editor) with another
 -- view instance in the same node.
 local function replace_view(old_view, new_view)
-  -- Rely on the active node; in this workflow the view we're swapping
-  -- from is always in the active node.
-  local node = core.root_view:get_active_node()
+  -- Resolve layout from the view itself so we cooperate with other
+  -- plugins that move/split/dock views.
+  local root_view = core.root_view
+  local root_node = root_view and root_view.root_node
+  if not root_node then
+    core.error("LiteNotes: root view not ready for view swap")
+    return
+  end
+
+  -- Preferred: find the node that actually contains old_view.
+  local node = root_node:get_node_for_view(old_view)
+
+  -- If old_view is no longer attached (closed or moved in a way we
+  -- don't track), fall back to the active node as a best effort.
   if not node then
-    core.error("LiteNotes: no active node for view swap")
+    node = root_view:get_active_node()
+  end
+
+  if not node then
+    core.error("LiteNotes: no node available for view swap")
     return
   end
 
   node:add_view(new_view)
-  node:remove_view(core.root_view, old_view)
+  -- Use close_view so the node can clean up if needed.
+  node:close_view(root_node, old_view)
   core.set_active_view(new_view)
 end
 
@@ -115,7 +131,7 @@ NoteReader = View:extend()
 
 function NoteReader:new(doc)
   NoteReader.super.new(self)
-  self.scrollable = true           -- allow scrolling for long notes
+  self.scrollable = true           -- allow scrolling for long notes (simple, no bar)
   self.context    = "session"      -- closed by normal close-all
   self.doc        = doc            -- core.doc for the notes file
 end
@@ -188,6 +204,10 @@ command.add(nil, {
     -- normalize to read mode (which will auto-save if needed).
     local active = core.active_view
     if active and active.doc and active.doc.filename == notes_path then
+      -- Already in NoteReader for this doc? Nothing to do.
+      if active.is and active:is(NoteReader) then
+        return
+      end
       enter_read_mode(active)
       return
     end
@@ -208,7 +228,13 @@ command.add(nil, {
     local doc  = core.open_doc(notes_path)
     local view = NoteReader(doc)
 
-    core.root_view:get_active_node():add_view(view)
+    local node = core.root_view:get_active_node()
+    if not node then
+      core.error("LiteNotes: no active node to open notes")
+      return
+    end
+
+    node:add_view(view)
     core.set_active_view(view)
 
     core.log("LiteNotes: opened project notes at %s", notes_path)
