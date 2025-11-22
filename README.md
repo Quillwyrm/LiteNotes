@@ -1,7 +1,4 @@
 ![Alt text](/logo.png)
-
-# LiteNotes
-
 LiteNotes is a lightweight developer-notes system for Lite XL.  
 It provides a **single dedicated notes/view panel** capable of:
 
