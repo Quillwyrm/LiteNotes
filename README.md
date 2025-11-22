@@ -1,5 +1,5 @@
 ![Alt text](/logo.png)
-LiteNotes is a lightweight `.md` viewer and developer-notes system for Lite XL.  
+LiteNotes is a lightweight markdown viewer and developer-notes system for Lite XL.  
 It provides a **single dedicated notes panel** capable of:
 
 
