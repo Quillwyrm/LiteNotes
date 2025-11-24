@@ -11,34 +11,56 @@ local SPAN      = parser.TOKENS.SPAN
 -- LAYOUT CONSTANTS
 -- -------------------------------------------------------------------------
 local L = {
-  -- Horizontal layout
-  BODY_X       = 32,  -- Left indent for body paragraphs and list text
-  HEADER_X     = 16,  -- Left indent for headers
-  LIST_INDENT  = 32,  -- Horizontal gap between bullet and list text
-  MARGIN_RIGHT = 8,   -- Right-side margin to keep text away from edge
-  PAD_CODE_X   = 2,   -- Horizontal padding around inline/code text
+  -- Horizontal layout -------------------------------------------------------
 
-  -- Code block background margins (symmetric from both sides)
-  CODE_MARGIN  = 16,  -- Left/right inset for code block background rects
+  BODY_X       = 32,  -- Left indent for normal paragraph and list *text*.
+                      -- Every paragraph and list item starts at this x.
 
-  -- Vertical layout
-  VIEW_PADDING_TOP  = 8,  -- Top padding before the first block
+  HEADER_X     = 16,  -- Left indent for headers (#, ##, ### ...)
+                      -- Headers sit slightly further left than body text.
 
-  HEADER_GAP_TOP    = 8,   -- Space before a header
-  HEADER_GAP_BOTTOM = 16,  -- Space after a header
+  LIST_INDENT  = 32,  -- Additional indent from the bullet symbol → list text.
+                      -- Bullet is placed at BODY_X, text starts at (bullet + LIST_INDENT).
 
-  PARA_GAP_TOP      = 8,   -- Space before a paragraph
-  PARA_GAP_BOTTOM   = 8,   -- Space after a paragraph
+  MARGIN_RIGHT = 8,   -- Right margin for *text wrapping* and horizontal rules.
+                      -- Text will wrap before reaching this far from the right edge.
 
-  LIST_GAP_TOP      = 8,   -- Space before a list item
-  LIST_GAP_BOTTOM   = 8,   -- Space after a list item
+  PAD_CODE_X   = 2,   -- Inline-code padding ( `inline` ), horizontal only.
+                      -- Background rect extends 2px left/right of inline code text.
 
-  CODE_GAP_TOP      = 8,   -- Space before a code block
-  CODE_GAP_BOTTOM   = 8,   -- Space after a code block
+  -- Code block layout -------------------------------------------------------
 
-  RULE_GAP_TOP      = 8,   -- Space before a horizontal rule
-  RULE_GAP_BOTTOM   = 8,   -- Space after a horizontal rule
+  CODE_MARGIN      = 16, -- Distance from panel edge → code block background.
+                         -- Used on BOTH left and right sides of the block.
+
+  CODE_PADDING_X   = 6,  -- Horizontal padding *inside* fenced code blocks.
+                         -- Distance from code-block BG → text on the left.
+                         
+  CODE_PADDING_Y   = 4,  -- Vertical padding *inside* fenced code blocks.
+                         -- Distance from code-block BG → text on top & bottom.
+
+  -- Vertical spacing between blocks ----------------------------------------
+
+  VIEW_PADDING_TOP  = 8,  -- Extra top padding before the very first block.
+
+  HEADER_GAP_TOP    = 8,   -- Gap placed *above* a header block.
+  HEADER_GAP_BOTTOM = 16,  -- Gap placed *below* a header block.
+
+  PARA_GAP_TOP      = 8,   -- Gap *before* a paragraph block.
+  PARA_GAP_BOTTOM   = 8,   -- Gap *after* a paragraph block.
+
+  -- Lists: block gaps vs intra-item spacing
+  LIST_GAP_TOP      = 6,   -- Gap before a *run* of list items (above the first item).
+  LIST_GAP_BOTTOM   = 6,   -- Gap after a *run* of list items (below the last item).
+  LIST_SPACING      = 4,   -- Gap between individual list items inside the run.
+
+  CODE_GAP_TOP      = 8,   -- Gap before an entire fenced code block.
+  CODE_GAP_BOTTOM   = 8,   -- Gap after an entire fenced code block.
+
+  RULE_GAP_TOP      = 8,   -- Gap before a horizontal rule (---).
+  RULE_GAP_BOTTOM   = 8,   -- Gap after a horizontal rule.
 }
+
 
 -- -------------------------------------------------------------------------
 -- THEME PALETTE
@@ -47,7 +69,7 @@ local NoteColors = {
   text    = function() return style.text end,
   header  = function() return style.syntax["keyword"] or style.accent end,
   code    = function() return style.syntax["string"]  or style.text end,
-  bullet  = function() return style.syntax["string"]  or style.accent end,
+  bullet  = function() return style.syntax["operator"]  or style.accent end,
   rule    = function() return style.dim end,
   code_bg = function() return style.line_highlight end,
   dim     = function() return style.dim end,
@@ -224,7 +246,10 @@ local function compute(blocks, max_width)
     level      = 0,
   }
 
-  for _, block in ipairs(blocks) do
+  for i = 1, #blocks do
+    local block      = blocks[i]
+    local prev_block = blocks[i - 1]
+    local next_block = blocks[i + 1]
 
     -- 1. HEADERS ------------------------------------------------------------
     if block.type == BLOCK.HEADER then
@@ -247,10 +272,17 @@ local function compute(blocks, max_width)
 
     -- 3. UNORDERED LIST ITEMS ----------------------------------------------
     elseif block.type == BLOCK.LIST then
-      local bullet_x = L.BODY_X + 8
+      local bullet_x = L.BODY_X
       local text_x   = bullet_x + L.LIST_INDENT
 
-      ctx.y      = ctx.y + L.LIST_GAP_TOP
+      -- Block-level gap before the first item in a run,
+      -- or intra-list spacing between items.
+      if not prev_block or prev_block.type ~= BLOCK.LIST then
+        ctx.y = ctx.y + L.LIST_GAP_TOP
+      else
+        ctx.y = ctx.y + L.LIST_SPACING
+      end
+
       ctx.x      = text_x
       ctx.indent = text_x
 
@@ -265,36 +297,66 @@ local function compute(blocks, max_width)
       }
 
       local line_h = line_layout(ctx, block.text, nil, false, nil)
-      ctx.y = ctx.y + line_h + L.LIST_GAP_BOTTOM
+
+      -- If this is the last item in the run, add LIST_GAP_BOTTOM
+      if not next_block or next_block.type ~= BLOCK.LIST then
+        ctx.y = ctx.y + line_h + L.LIST_GAP_BOTTOM
+      else
+        ctx.y = ctx.y + line_h
+      end
 
     -- 4. CODE BLOCKS --------------------------------------------------------
     elseif block.type == BLOCK.CODE then
       ctx.x      = L.BODY_X
       ctx.indent = L.BODY_X
 
-      local line_h = NoteFonts.CODE:get_height()
+      local font      = NoteFonts.CODE
+      local line_h    = font:get_height()
+      local pad_x     = L.CODE_PADDING_X
+      local pad_y     = L.CODE_PADDING_Y
+      local left_bg   = L.CODE_MARGIN
+      local right_bg  = max_width - L.CODE_MARGIN
+
+      -- gap before block
       ctx.y = ctx.y + L.CODE_GAP_TOP
 
-      if block.lines then
+      if block.lines and #block.lines > 0 then
+        -- single background rect for entire block
+        local rect_x = left_bg
+        local rect_y = ctx.y
+        local rect_w = right_bg - left_bg
+        local rect_h = (#block.lines * line_h) + (2 * pad_y)
+
+        draw_list[#draw_list + 1] = {
+          type  = DRAW_MODE.RECT,
+          x     = rect_x,
+          y     = rect_y,
+          w     = rect_w,
+          h     = rect_h,
+          color = NoteColors.code_bg(),
+        }
+
+        -- update max width
+        local right = rect_x + rect_w
+        if right > ctx.max_seen_w then ctx.max_seen_w = right end
+
+        -- text origin
+        ctx.x = rect_x + pad_x
+        ctx.y = rect_y + pad_y
+
+        -- lines inside block
         for _, line in ipairs(block.lines) do
-          -- Background for the entire code line, symmetric margin both sides.
-          draw_list[#draw_list + 1] = {
-            type  = DRAW_MODE.RECT,
-            x     = L.CODE_MARGIN,
-            y     = ctx.y,
-            w     = max_width - 2 * L.CODE_MARGIN,
-            h     = line_h,
-            color = NoteColors.code_bg(),
-          }
-
-          -- Foreground text in "raw" layout mode.
           line_layout(ctx, line, nil, true, NoteColors.code())
-
-          ctx.x = L.BODY_X
-          ctx.y = ctx.y + line_h
+          ctx.x = rect_x + pad_x     -- reset x for next line
+          ctx.y = ctx.y + line_h     -- advance y by line height only
         end
+
+        -- below the block
+        ctx.x = L.BODY_X
+        ctx.y = rect_y + rect_h
       end
 
+      -- gap after block
       ctx.y = ctx.y + L.CODE_GAP_BOTTOM
 
     -- 5. HORIZONTAL RULES ---------------------------------------------------

@@ -408,9 +408,10 @@ command.add(nil, {
 local StatusView = require "core.statusview"
 
 if core.status_view then
+  -- Left side: mode + path
   core.status_view:add_item({
     name = "litenotes:status",
-    alignment = StatusView.Item.LEFT, 
+    alignment = StatusView.Item.LEFT,
     position = 1,
     
     predicate = function()
@@ -419,24 +420,44 @@ if core.status_view then
 
     get_item = function()
       local view = core.active_view
-      local sep = "   |   " 
+      local sep = "   |   "
       local sep_color = style.syntax["comment"] or style.dim
-      
+      local path = (view and view.doc and view.doc.filename) or "Untitled"
+
       if view:is(NoteEditView) then
         return {
           style.accent, "EDIT",
-          sep_color, style.font, sep
+          sep_color, style.font, sep,
+          style.text, path,
         }
       else
         return {
           style.text, "READ",
           sep_color, style.font, sep,
-          style.text, view.doc.filename or "Untitled"
+          style.text, path,
         }
       end
     end
   })
+
+  -- Right side: plugin label
+  core.status_view:add_item({
+    name = "litenotes:label",
+    alignment = StatusView.Item.RIGHT,
+    position = 1,
+
+    predicate = function()
+      return core.active_view and core.active_view._is_litenotes
+    end,
+
+    get_item = function()
+      return {
+        style.dim, style.font, "LiteNotes v0.1",
+      }
+    end
+  })
 end
+
 
 ----------------------------------------------------------------------
 -- WORKSPACE RESTORE
