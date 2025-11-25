@@ -98,6 +98,7 @@ local function line_layout(ctx, text, base_font_set, is_code_block, custom_color
       if token.style == SPAN.BOLD then active_font = NoteFonts.BOLD
       elseif token.style == SPAN.ITALIC then active_font = NoteFonts.ITALIC
       elseif token.style == SPAN.CODE then active_font = NoteFonts.CODE
+      elseif token.style == SPAN.STRIKE then active_font = NoteFonts.REGULAR -- <--- STRIKE FONT RESOLUTION
       else active_font = NoteFonts.REGULAR end
     end
 
@@ -145,6 +146,22 @@ local function line_layout(ctx, text, base_font_set, is_code_block, custom_color
               ctx.y = ctx.y + active_font:get_height()
             end
 
+            -- STRIKETHROUGH LINE DRAWING
+            if token.style == SPAN.STRIKE then
+              local line_h = active_font:get_height()
+              local line_y = ctx.y + math.floor(line_h / 2)
+              
+              draw_list[#draw_list + 1] = {
+                type  = DRAW_MODE.RECT,
+                x     = ctx.x - 3,
+                y     = line_y,
+                w     = w + 6, -- width of the word
+                h     = 2, -- 1 pixel height line
+                color = color, -- Use text color for the line
+              }
+            end
+            
+            -- CODE BLOCK DRAWING (Existing logic)
             if token.style == SPAN.CODE then
               ctx.x = ctx.x + L.PAD_CODE_X
               draw_list[#draw_list + 1] = {
@@ -164,6 +181,7 @@ local function line_layout(ctx, text, base_font_set, is_code_block, custom_color
                 color = color,
               }
               ctx.x = ctx.x + w + L.PAD_CODE_X
+            -- STANDARD TEXT DRAWING (Existing logic + STRIKETHROUGH text)
             else
               draw_list[#draw_list + 1] = {
                 type  = DRAW_MODE.TEXT,
@@ -295,6 +313,8 @@ local function draw_list(ctx, block, prev_block, next_block)
     local label = "•"
     if block.is_ordered and block.number then
       label = tostring(block.number) .. "."
+      bullet_x = bullet_x - (NoteFonts.REGULAR:get_width(".") / 2)
+    
     end
 
     table.insert(ctx.output, {

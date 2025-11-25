@@ -14,7 +14,8 @@ local TOKENS = {
     NONE   = 0,
     BOLD   = 1,
     ITALIC = 2,
-    CODE   = 4 
+    CODE   = 4,
+    STRIKE = 5,
   }
 }
 
@@ -121,7 +122,8 @@ local span_rules = {
   -- content_idx: Which capture group contains the actual text content?
   { type = TOKENS.SPAN.CODE,   pattern = "(`+)(.-)%1",      content_idx = 2 },
   { type = TOKENS.SPAN.BOLD,   pattern = "%*%*(.-)%*%*",    content_idx = 1 },
-  { type = TOKENS.SPAN.ITALIC, pattern = "%*([^%s].-)%*",   content_idx = 1 }
+  { type = TOKENS.SPAN.ITALIC, pattern = "%*([^%s].-)%*",   content_idx = 1 },
+  { type = TOKENS.SPAN.STRIKE, pattern = "~~(.*)~~",        content_idx = 1 }
 }
 
 -- -------------------------------------------------------------------------
