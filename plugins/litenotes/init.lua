@@ -101,10 +101,12 @@ end
 
 function enter_read_mode(editor)
   if editor.doc:is_dirty() then editor.doc:save() end
+  -- Scroll logic removed
   replace_view(editor, NoteReadView(editor.doc, editor._litenotes_kind))
 end
 
 function enter_edit_mode(reader)
+  -- Scroll logic removed
   replace_view(reader, NoteEditView(reader.doc, reader._litenotes_kind))
 end
 
@@ -230,18 +232,21 @@ function NoteReadView:draw()
   core.push_clip_rect(self.position.x, self.position.y, self.size.x, self.size.y)
   
   -- Culling logic with safety buffer
-  local min_y, max_y = -oy, -oy + self.size.y
+  local min_y = -oy - 100            -- Top of screen (minus buffer)
+  local max_y = -oy + self.size.y + 100 -- Bottom of screen (plus buffer)
+
   for i = 1, #cmds do
     local cmd = cmds[i]
 
-    -- OPTIMIZATION: Stop processing if we are below the view
-    if cmd.y > max_y + 100 then break end
+    -- OPTIMIZATION 1: Stop if we passed the bottom (KEPT)
+    if cmd.y > max_y then break end
+
+    -- OPTIMIZATION 2: Intersection Check (KEPT)
+    local cmd_h = cmd.h or cmd.font:get_height()
     
-    if (cmd.y + 100 > min_y) and (cmd.y < max_y + 100) then
-      
+    if (cmd.y + cmd_h > min_y) then
       if cmd.type == TYPE.TEXT then
         renderer.draw_text(cmd.font, cmd.text, ox + cmd.x, oy + cmd.y, cmd.color)
-        
       elseif cmd.type == TYPE.RECT then
         renderer.draw_rect(ox + cmd.x, oy + cmd.y, cmd.w, cmd.h, cmd.color)
       end
@@ -249,9 +254,18 @@ function NoteReadView:draw()
   end
   
   core.pop_clip_rect()
-
+  -- Active View Hilight 
+  if core.active_view == self then
+    local b = 1
+    renderer.draw_rect(self.position.x, self.position.y, self.size.x, b, style.accent) -- Top
+    renderer.draw_rect(self.position.x, self.position.y + self.size.y - b, self.size.x, b, style.accent) -- Bottom
+    renderer.draw_rect(self.position.x, self.position.y, b, self.size.y, style.accent) -- Left
+    renderer.draw_rect(self.position.x + self.size.x - b, self.position.y, b, self.size.y, style.accent) -- Right
+  end
   -- Draw Scrollbar last to overlay content
   self:draw_scrollbar()
+
+
 end
 
 ----------------------------------------------------------------------
@@ -393,24 +407,16 @@ end
 -- 8. CONTEXT MENU INTEGRATION
 ----------------------------------------------------------------------
 
--- We integrate with the existing plugins/contextmenu and plugins/treeview
--- exactly as referenced here; no extra assumptions.
-
 local contextmenu = require "plugins.contextmenu"
 
-
-
-  -- DocView .md: right-click in a markdown doc view.
-  contextmenu:register(function()
-    local view = core.active_view
-    return view
-      and view:is(DocView)
-      and view.doc
-      and view.doc.filename
-      and view.doc.filename:match("%.md$")
-  end, {
-    { text = "Open in LiteNotes", command = "litenotes:note" }
-  })
-
-
-
+-- DocView .md: right-click in a markdown doc view.
+contextmenu:register(function()
+  local view = core.active_view
+  return view
+    and view:is(DocView)
+    and view.doc
+    and view.doc.filename
+    and view.doc.filename:match("%.md$")
+end, {
+  { text = "Open in LiteNotes", command = "litenotes:note" }
+})

@@ -11,6 +11,9 @@ return {
     bold    = plugin_dir .. "/fonts/iAWriterQuattroS-Bold.ttf",
     italic  = plugin_dir .. "/fonts/iAWriterQuattroS-Italic.ttf",
     code    = plugin_dir .. "/fonts/iAWriterMonoS-Regular.ttf", 
-    size    = 16,
+    size    = 14,
   },
 }
+
+
+-- Fonts from iA-Fonts by Iaolo (https://github.com/iaolo/iA-Fonts)

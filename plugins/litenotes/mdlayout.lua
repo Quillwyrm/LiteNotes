@@ -15,30 +15,34 @@ local SPAN      = parser.TOKENS.SPAN
 -- -------------------------------------------------------------------------
 -- LAYOUT CONSTANTS
 -- -------------------------------------------------------------------------
-local L = {
-  BODY_X       = 32,
-  HEADER_X     = 16,
-  LIST_INDENT  = 32,
-  MARGIN_RIGHT = 8,
-  PAD_CODE_X   = 2,
 
-  CODE_MARGIN    = 16,
-  CODE_PADDING_X = 6,
-  CODE_PADDING_Y = 4,
+-- 1.0 = 1em (the base font size)
+local SCALES = {
+  BODY_X       = 2.0,
+  HEADER_X     = 1.0,
+  LIST_INDENT  = 2.0,
+  MARGIN_RIGHT = 0.5,
+  PAD_CODE_X   = 0.125,
 
-  VIEW_PADDING_TOP  = 8,
-  HEADER_GAP_TOP    = 8,
-  HEADER_GAP_BOTTOM = 16,
-  PARA_GAP_TOP      = 8,
-  PARA_GAP_BOTTOM   = 8,
-  LIST_GAP_TOP      = 6,
-  LIST_GAP_BOTTOM   = 6,
-  LIST_SPACING      = 4,
-  CODE_GAP_TOP      = 8,
-  CODE_GAP_BOTTOM   = 8,
-  RULE_GAP_TOP      = 8,
-  RULE_GAP_BOTTOM   = 8,
+  CODE_MARGIN    = 1.0,
+  CODE_PADDING_X = 0.375,
+  CODE_PADDING_Y = 0.25,
+
+  VIEW_PADDING_TOP  = 0.5,
+  HEADER_GAP_TOP    = 0.5,
+  HEADER_GAP_BOTTOM = 1.0,
+  PARA_GAP_TOP      = 0.5,
+  PARA_GAP_BOTTOM   = 0.5,
+  LIST_GAP_TOP      = 0.375,
+  LIST_GAP_BOTTOM   = 0.375,
+  LIST_SPACING      = 0.25,
+  CODE_GAP_TOP      = 0.5,
+  CODE_GAP_BOTTOM   = 0.5,
+  RULE_GAP_TOP      = 0.5,
+  RULE_GAP_BOTTOM   = 0.5,
 }
+
+local L = {} -- Populated at runtime
 
 -- -------------------------------------------------------------------------
 -- THEME PALETTE
@@ -58,6 +62,12 @@ local NoteFonts = {}
 local function load_assets(config)
   local base_size = config.fonts.size
 
+  -- 1. Calculate Layout (Em-based)
+  for k, scale in pairs(SCALES) do
+    L[k] = math.floor(base_size * scale)
+  end
+
+  -- 2. Load Fonts
   NoteFonts.REGULAR = renderer.font.load(config.fonts.regular, base_size)
   NoteFonts.BOLD    = renderer.font.load(config.fonts.bold,    base_size)
   NoteFonts.ITALIC  = renderer.font.load(config.fonts.italic,  base_size)

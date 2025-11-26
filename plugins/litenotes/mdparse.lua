@@ -65,7 +65,7 @@ local function handle_list_ordered(state, line, spaces, number, content, line_id
   return true
 end
 
-local function handle_list_unordered(state, line, spaces, content, line_idx)
+local function handle_list_unordered(state, line, spaces, bullet, content, line_idx)
   local checked = nil
   local prefix = content:sub(1, 4)
   
@@ -114,10 +114,11 @@ end
 -- -------------------------------------------------------------------------
 
 local block_rules = {
-  { "^```%s*(%S*)",                    handle_fence_open     }, -- CAPTURE LANG
+  { "^```%s*(%S*)",                    handle_fence_open     },
   { "^(#+)%s+(.*)",                     handle_header         },
   { "^(%s*)(%d+)%.%s+(.*)",             handle_list_ordered   },
-  { "^(%s*)%-%s+(.*)",                  handle_list_unordered },
+  -- CHANGED: Added [%-%*%+] to capture -, *, or +
+  { "^(%s*)([%-%*%+])%s+(.*)",          handle_list_unordered },
   { "^%-%-%-+$",                        handle_rule           },
   { "^%s*$",                            handle_blank          },
 }
@@ -128,8 +129,12 @@ local block_rules = {
 
 local span_rules = {
   { type = TOKENS.SPAN.CODE,   pattern = "(`+)(.-)%1",      content_idx = 2 },
+  -- NEW: Bold+Italic (Must be before Bold/Italic)
+  { type = TOKENS.SPAN.BOLD,   pattern = "%*%*%*(.-)%*%*%*", content_idx = 1 }, 
   { type = TOKENS.SPAN.BOLD,   pattern = "%*%*(.-)%*%*",    content_idx = 1 },
   { type = TOKENS.SPAN.ITALIC, pattern = "%*([^%s].-)%*",   content_idx = 1 },
+  -- NEW: Underscore Italic
+  { type = TOKENS.SPAN.ITALIC, pattern = "_([^%s].-)_",     content_idx = 1 },
   { type = TOKENS.SPAN.STRIKE, pattern = "~~(.*)~~",        content_idx = 1 }
 }
 
