@@ -32,9 +32,19 @@ local t_insert  = table.insert
 -- PHASE 1: BLOCK HANDLERS
 -- -------------------------------------------------------------------------
 
-local function handle_fence_open(state, line, c1, c2, c3, line_idx)
+local function handle_fence_open(state, line, lang, c2, c3, line_idx)
   state.in_code = true
-  t_insert(state.blocks, { type = TOKENS.BLOCK.CODE, lines = {}, arg = nil })
+  
+  -- Normalize language: "Lua" -> "lua", empty -> nil
+  local clean_lang = lang and lang:lower() or nil
+  if clean_lang == "" then clean_lang = nil end
+
+  t_insert(state.blocks, { 
+    type  = TOKENS.BLOCK.CODE, 
+    lines = {}, 
+    arg   = nil,
+    lang  = clean_lang 
+  })
   return true
 end
 
@@ -50,20 +60,18 @@ local function handle_list_ordered(state, line, spaces, number, content, line_id
     is_ordered = true,
     number     = tonumber(number),
     level      = math.floor(#spaces / 2),
-    line       = line_idx -- Store the source line
+    line       = line_idx 
   })
   return true
 end
 
 local function handle_list_unordered(state, line, spaces, content, line_idx)
   local checked = nil
-  
-  -- [SAFE] Check first 4 chars for "[ ] " or "[x] "
   local prefix = content:sub(1, 4)
   
   if prefix == "[ ] " then
     checked = false
-    content = content:sub(5) -- Strip first 4 chars
+    content = content:sub(5)
   elseif prefix == "[x] " or prefix == "[X] " then
     checked = true
     content = content:sub(5)
@@ -75,8 +83,8 @@ local function handle_list_unordered(state, line, spaces, content, line_idx)
     is_ordered = false,
     number     = nil,
     level      = math.floor(#spaces / 2),
-    checked    = checked, -- boolean or nil
-    line       = line_idx -- Store the source line
+    checked    = checked, 
+    line       = line_idx 
   })
   return true
 end
@@ -106,7 +114,7 @@ end
 -- -------------------------------------------------------------------------
 
 local block_rules = {
-  { "^```",                             handle_fence_open     },
+  { "^```%s*(%S*)",                    handle_fence_open     }, -- CAPTURE LANG
   { "^(#+)%s+(.*)",                     handle_header         },
   { "^(%s*)(%d+)%.%s+(.*)",             handle_list_ordered   },
   { "^(%s*)%-%s+(.*)",                  handle_list_unordered },
@@ -119,7 +127,6 @@ local block_rules = {
 -- -------------------------------------------------------------------------
 
 local span_rules = {
-  -- content_idx: Which capture group contains the actual text content?
   { type = TOKENS.SPAN.CODE,   pattern = "(`+)(.-)%1",      content_idx = 2 },
   { type = TOKENS.SPAN.BOLD,   pattern = "%*%*(.-)%*%*",    content_idx = 1 },
   { type = TOKENS.SPAN.ITALIC, pattern = "%*([^%s].-)%*",   content_idx = 1 },
@@ -139,7 +146,6 @@ local function parse_blocks(raw_text)
   }
 
   raw_text = raw_text:gsub("\t", "    ")
-
   local line_idx = 0 
 
   for line in raw_text:gmatch("([^\r\n]*)\r?\n?") do
@@ -155,10 +161,8 @@ local function parse_blocks(raw_text)
     else
       local matched = false
       for _, rule in ipairs(block_rules) do
-        -- Check pattern
         local c1, c2, c3 = str_match(line, rule[1])
         if c1 or str_match(line, rule[1]) then
-          -- Pass all captures and the current line index
           rule[2](state, line, c1, c2, c3, line_idx)
           matched = true
           break
@@ -180,13 +184,10 @@ end
 local function scan_next(text, rule, pos)
   local s, e, c1, c2 = str_find(text, rule.pattern, pos)
   if not s then return nil end
-  
-  -- Optimization: Avoid table allocation for captures
   local content
   if rule.content_idx == 1 then content = c1
   elseif rule.content_idx == 2 then content = c2
   end
-  
   return { s = s, e = e, text = content, type = rule.type, rule = rule }
 end
 
@@ -195,26 +196,20 @@ local function parse_spans(text)
   local pos = 1
   local len = #text
 
-  -- 1. Initialize Lookahead Cache
   local next_matches = {}
   for _, rule in ipairs(span_rules) do
     local match = scan_next(text, rule, pos)
-    if match then 
-      t_insert(next_matches, match)
-    end
+    if match then t_insert(next_matches, match) end
   end
 
   while pos <= len do
-    
-    -- Clean up Stale Matches logic
     local i = 1
     while i <= #next_matches do
       local match = next_matches[i]
       if match.s < pos then
         local next_one = scan_next(text, match.rule, pos)
         if next_one then
-          next_matches[i] = next_one
-          i = i + 1
+          next_matches[i] = next_one; i = i + 1
         else
           table.remove(next_matches, i)
         end
@@ -223,17 +218,14 @@ local function parse_spans(text)
       end
     end
 
-    -- 2. Find the Winner (Nearest Match)
     local best_idx = nil
     local best_match = nil
 
     for idx, match in ipairs(next_matches) do
       if not best_match or match.s < best_match.s then
-        best_match = match
-        best_idx = idx
+        best_match = match; best_idx = idx
       elseif match.s == best_match.s and idx < best_idx then
-         best_match = match
-         best_idx = idx
+         best_match = match; best_idx = idx
       end
     end
 
@@ -241,22 +233,15 @@ local function parse_spans(text)
       t_insert(tokens, { style = TOKENS.SPAN.NONE, text = str_sub(text, pos) })
       break
     else
-      -- 3. Emit Pre-Token Text
       if best_match.s > pos then
         t_insert(tokens, { style = TOKENS.SPAN.NONE, text = str_sub(text, pos, best_match.s - 1) })
       end
-
-      -- 4. Emit Token (Uses 'style' key)
       t_insert(tokens, { style = best_match.type, text = best_match.text })
       pos = best_match.e + 1
 
-      -- 5. Refresh Cache for the Winner
       local new_match = scan_next(text, best_match.rule, pos)
-      if new_match then
-        next_matches[best_idx] = new_match
-      else
-        table.remove(next_matches, best_idx)
-      end
+      if new_match then next_matches[best_idx] = new_match
+      else table.remove(next_matches, best_idx) end
     end
   end
 
@@ -267,6 +252,5 @@ return {
   TOKENS       = TOKENS,
   parse_blocks = parse_blocks,
   parse_spans  = parse_spans,
-  -- Add other handlers if needed for testing
   handle_list_unordered = handle_list_unordered, 
 }

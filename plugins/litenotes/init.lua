@@ -11,6 +11,7 @@ local View    = require "core.view"
 local DocView = require "core.docview"
 local StatusView = require "core.statusview" 
 
+
 local config  = require "plugins.litenotes.config"
 local parser  = require "plugins.litenotes.mdparse"
 local layout  = require "plugins.litenotes.mdlayout"
@@ -21,12 +22,13 @@ layout.load_assets(config)
 -- Forward declarations
 local NoteReadView, NoteEditView
 local enter_read_mode, enter_edit_mode
+local get_treeview_md_file
 
 ----------------------------------------------------------------------
 -- 2. FILE SYSTEM & PATHS
 ----------------------------------------------------------------------
 
-local NOTES_DIR = USERDIR .. PATHSEP .. "litenotes"
+local NOTES_DIR = USERDIR .. PATHSEP .. "project_notes"
 
 local function ensure_notes_dir()
   local info = system.get_file_info(NOTES_DIR)
@@ -247,7 +249,7 @@ function NoteReadView:draw()
 end
 
 ----------------------------------------------------------------------
--- 5. WIRING & COMMANDS
+-- 5. WIRING
 ----------------------------------------------------------------------
 
 local function is_litenotes(v) return v and v._is_litenotes end
@@ -285,8 +287,12 @@ local function open_in_panel(view)
   end
 end
 
+----------------------------------------------------------------------
+-- 6. commands
+----------------------------------------------------------------------
+
 command.add(nil, {
-  ["litenotes:devnotes"] = function()
+  ["litenotes:view project notes"] = function()
     local doc = open_or_create_doc()
     if not doc then return end
 
@@ -305,18 +311,24 @@ command.add(nil, {
     open_in_panel(NoteReadView(doc, "project"))
   end,
   
-  ["litenotes:note"] = function()
+  ["litenotes:open note"] = function()
     local active = core.active_view
     if active.doc and active.doc.filename:match("%.md$") then
       open_in_panel(NoteReadView(active.doc, "markdown"))
     else
-      command.perform("litenotes:devnotes")
+      command.perform("litenotes:view project notes")
     end
-  end
+  end,
+
+  -- Context menu entry for .md DocViews: reuse existing behavior.
+  ["litenotes:note"] = function()
+    command.perform("litenotes:open note")
+  end,
+
 })
 
 ----------------------------------------------------------------------
--- 6. STATUS BAR
+-- 7. STATUS BAR
 ----------------------------------------------------------------------
 
 if core.status_view then
@@ -369,3 +381,30 @@ if core.status_view then
     end
   })
 end
+
+
+----------------------------------------------------------------------
+-- 8. CONTEXT MENU INTEGRATION
+----------------------------------------------------------------------
+
+-- We integrate with the existing plugins/contextmenu and plugins/treeview
+-- exactly as referenced here; no extra assumptions.
+
+local contextmenu = require "plugins.contextmenu"
+
+
+
+  -- DocView .md: right-click in a markdown doc view.
+  contextmenu:register(function()
+    local view = core.active_view
+    return view
+      and view:is(DocView)
+      and view.doc
+      and view.doc.filename
+      and view.doc.filename:match("%.md$")
+  end, {
+    { text = "Open in LiteNotes", command = "litenotes:note" }
+  })
+
+
+

@@ -4,6 +4,10 @@ local style   = require "core.style"
 local parser  = require "plugins.litenotes.mdparse"
 local config  = require "plugins.litenotes.config"
 
+-- SYNTAX HIGHLIGHTING DEPENDENCIES
+local tokenizer = require "core.tokenizer"
+local syntax    = require "core.syntax"
+
 local DRAW_MODE = { TEXT = 1, RECT = 2 }
 local BLOCK     = parser.TOKENS.BLOCK
 local SPAN      = parser.TOKENS.SPAN
@@ -12,19 +16,16 @@ local SPAN      = parser.TOKENS.SPAN
 -- LAYOUT CONSTANTS
 -- -------------------------------------------------------------------------
 local L = {
-  -- Horizontal layout -------------------------------------------------------
   BODY_X       = 32,
   HEADER_X     = 16,
   LIST_INDENT  = 32,
   MARGIN_RIGHT = 8,
   PAD_CODE_X   = 2,
 
-  -- Code block layout -------------------------------------------------------
   CODE_MARGIN    = 16,
   CODE_PADDING_X = 6,
   CODE_PADDING_Y = 4,
 
-  -- Vertical spacing between blocks ----------------------------------------
   VIEW_PADDING_TOP  = 8,
   HEADER_GAP_TOP    = 8,
   HEADER_GAP_BOTTOM = 16,
@@ -54,7 +55,6 @@ local NoteColors = {
 
 local NoteFonts = {}
 
--- Initializes all fonts used by the notes renderer.
 local function load_assets(config)
   local base_size = config.fonts.size
 
@@ -76,7 +76,56 @@ local function load_assets(config)
   end
 end
 
--- Lays out a single logical line of text into draw commands.
+-- -------------------------------------------------------------------------
+-- SYNTAX HELPERS
+-- -------------------------------------------------------------------------
+
+local function resolve_syntax(lang)
+  if not lang then return nil end
+  -- Map common fence names to dummy filenames LiteXL recognizes
+  local map = {
+    js = "f.js", javascript = "f.js",
+    py = "f.py", python = "f.py",
+    rb = "f.rb", ruby = "f.rb",
+    sh = "f.sh", bash = "f.sh",
+    md = "f.md", markdown = "f.md",
+    c = "f.c", cpp = "f.cpp", h = "f.h",
+    lua = "f.lua",
+    xml = "f.xml", html = "f.html",
+    css = "f.css",
+    json = "f.json",
+    odin = "f.odin",
+    go = "f.go",
+    rs = "f.rs", rust = "f.rs"
+  }
+  
+  -- Use map or fallback to "fake.lang"
+  local fname = map[lang] or ("fake." .. lang)
+  return syntax.get(fname)
+end
+
+local function ensure_block_tokens(block)
+  -- If we already have tokens or there is no language, do nothing
+  if block.tokens or not block.lang then return end
+  
+  local syn = resolve_syntax(block.lang)
+  if not syn then return end
+  
+  block.tokens = {}
+  local state = nil -- Tokenizer state (starts nil)
+  
+  for i, line in ipairs(block.lines) do
+    -- tokenizer.tokenize returns a flat list {type, text, type, text...}
+    local tokens, new_state = tokenizer.tokenize(syn, line, state)
+    block.tokens[i] = tokens
+    state = new_state
+  end
+end
+
+-- -------------------------------------------------------------------------
+-- LAYOUT ENGINE
+-- -------------------------------------------------------------------------
+
 local function line_layout(ctx, text, base_font_set, is_code_block, custom_color)
   local draw_list = ctx.output
   local tokens
@@ -98,7 +147,7 @@ local function line_layout(ctx, text, base_font_set, is_code_block, custom_color
       if token.style == SPAN.BOLD then active_font = NoteFonts.BOLD
       elseif token.style == SPAN.ITALIC then active_font = NoteFonts.ITALIC
       elseif token.style == SPAN.CODE then active_font = NoteFonts.CODE
-      elseif token.style == SPAN.STRIKE then active_font = NoteFonts.REGULAR -- <--- STRIKE FONT RESOLUTION
+      elseif token.style == SPAN.STRIKE then active_font = NoteFonts.REGULAR 
       else active_font = NoteFonts.REGULAR end
     end
 
@@ -108,7 +157,7 @@ local function line_layout(ctx, text, base_font_set, is_code_block, custom_color
       color = NoteColors.code()
     end
 
-    -- C. Code block: raw layout
+    -- C. Code block: raw layout (Fallback for monochrome code)
     if is_code_block then
       local w = active_font:get_width(token.text)
       draw_list[#draw_list + 1] = {
@@ -119,7 +168,6 @@ local function line_layout(ctx, text, base_font_set, is_code_block, custom_color
         font  = active_font,
         color = color,
       }
-      -- Horizontal cursor advancement removed to prevent horizontal bunching
       if w + ctx.x > ctx.max_seen_w then ctx.max_seen_w = w + ctx.x end
 
     -- D. Standard wrapping
@@ -146,22 +194,21 @@ local function line_layout(ctx, text, base_font_set, is_code_block, custom_color
               ctx.y = ctx.y + active_font:get_height()
             end
 
-            -- STRIKETHROUGH LINE DRAWING
+            -- STRIKETHROUGH
             if token.style == SPAN.STRIKE then
               local line_h = active_font:get_height()
               local line_y = ctx.y + math.floor(line_h / 2)
-              
               draw_list[#draw_list + 1] = {
                 type  = DRAW_MODE.RECT,
                 x     = ctx.x - 3,
                 y     = line_y,
-                w     = w + 6, -- width of the word
-                h     = 2, -- 1 pixel height line
-                color = color, -- Use text color for the line
+                w     = w + 6,
+                h     = 2, 
+                color = color,
               }
             end
             
-            -- CODE BLOCK DRAWING (Existing logic)
+            -- INLINE CODE
             if token.style == SPAN.CODE then
               ctx.x = ctx.x + L.PAD_CODE_X
               draw_list[#draw_list + 1] = {
@@ -181,7 +228,7 @@ local function line_layout(ctx, text, base_font_set, is_code_block, custom_color
                 color = color,
               }
               ctx.x = ctx.x + w + L.PAD_CODE_X
-            -- STANDARD TEXT DRAWING (Existing logic + STRIKETHROUGH text)
+            -- STANDARD TEXT
             else
               draw_list[#draw_list + 1] = {
                 type  = DRAW_MODE.TEXT,
@@ -235,7 +282,6 @@ local function draw_paragraph(ctx, block)
 end
 
 local function draw_list(ctx, block, prev_block, next_block)
-  -- 1. Nesting & Spacing
   local nest_offset = (block.level or 0) * L.LIST_INDENT
   local bullet_x = L.BODY_X + nest_offset
   local text_x   = bullet_x + L.LIST_INDENT
@@ -250,30 +296,24 @@ local function draw_list(ctx, block, prev_block, next_block)
   ctx.indent = text_x
   local bullet_y = ctx.y
 
-  -- 2. Checkbox vs Bullet Logic (VISUALS ONLY in stable state)
   if block.checked ~= nil then
-    -- DEFINE ASSETS
     local tick_char = "✓" 
     local tick_font = NoteFonts.BOLD
     
-    -- MEASURE
     local tw = math.floor(tick_font:get_width(tick_char))
     local th = tick_font:get_height()
     
-    -- PARITY CHECK (The "-1px Solution")
     local box_sz = math.floor(config.fonts.size)
     if (box_sz % 2) ~= (tw % 2) then
       box_sz = box_sz - 1
     end
 
-    -- GEOMETRY
     local line_h = NoteFonts.REGULAR:get_height()
     local border = 2
 
     local box_y = math.floor(bullet_y + (line_h - box_sz) / 2)
     local box_x = math.floor(bullet_x - (box_sz / 4))
 
-    -- A. Draw Box Outline (Non-Interactive)
     table.insert(ctx.output, {
       type     = DRAW_MODE.RECT,
       x        = box_x,
@@ -284,7 +324,6 @@ local function draw_list(ctx, block, prev_block, next_block)
     })
 
     if block.checked then
-       -- [x] Checked: Pixel-Perfect Center Tick
        local tx = box_x + (box_sz - tw) / 2
        local ty = box_y +  (box_sz - th) / 2
        
@@ -297,7 +336,6 @@ local function draw_list(ctx, block, prev_block, next_block)
         color = style.background2,
       })
     else
-      -- [ ] Unchecked: Draw Inner Square
       table.insert(ctx.output, {
         type  = DRAW_MODE.RECT,
         x     = box_x + border,
@@ -309,12 +347,10 @@ local function draw_list(ctx, block, prev_block, next_block)
     end
     
   else
-    -- Standard Bullet/Number (Literal/Number color)
     local label = "•"
     if block.is_ordered and block.number then
       label = tostring(block.number) .. "."
       bullet_x = bullet_x - (NoteFonts.REGULAR:get_width(".") / 2)
-    
     end
 
     table.insert(ctx.output, {
@@ -327,7 +363,6 @@ local function draw_list(ctx, block, prev_block, next_block)
     })
   end
 
-  -- 3. Render Text Line
   local line_h = line_layout(ctx, block.text, nil, false, nil)
   
   if not next_block or next_block.type ~= BLOCK.LIST then
@@ -337,9 +372,13 @@ local function draw_list(ctx, block, prev_block, next_block)
   end
 end
 
+-- UPDATED DRAW_CODE
 local function draw_code(ctx, block)
   ctx.x      = L.BODY_X
   ctx.indent = L.BODY_X
+
+  -- 1. Ensure we have tokens if language is present
+  ensure_block_tokens(block)
 
   local font      = NoteFonts.CODE
   local line_h    = font:get_height()
@@ -369,22 +408,54 @@ local function draw_code(ctx, block)
       ctx.max_seen_w = rect_x + rect_w 
     end
 
-    -- text origin
-    ctx.x = rect_x + pad_x
+    -- Text Origin
+    local base_x = rect_x + pad_x
     ctx.y = rect_y + pad_y
 
-    for _, line in ipairs(block.lines) do
-      line_layout(ctx, line, nil, true, NoteColors.code())
-      ctx.x = rect_x + pad_x -- reset x for next line
-      ctx.y = ctx.y + line_h -- advance y by line height only
+    for i, line in ipairs(block.lines) do
+      ctx.x = base_x 
+
+      -- Check if we have syntax tokens for this line
+      if block.tokens and block.tokens[i] then
+        local row_tokens = block.tokens[i]
+        
+        -- Token list is flat: { type, text, type, text ... }
+        for j = 1, #row_tokens, 2 do
+          local type = row_tokens[j]
+          local text = row_tokens[j+1]
+          
+          -- Resolve color from theme
+          local color = style.syntax[type] or NoteColors.code()
+          
+          -- Emit Text Command directly
+          table.insert(ctx.output, {
+            type  = DRAW_MODE.TEXT,
+            x     = ctx.x,
+            y     = ctx.y,
+            text  = text,
+            font  = font,
+            color = color,
+          })
+          
+          ctx.x = ctx.x + font:get_width(text)
+        end
+        
+        -- Update total width seen
+        if ctx.x > ctx.max_seen_w then ctx.max_seen_w = ctx.x end
+      else
+        -- Fallback: Use standard single-color layout
+        line_layout(ctx, line, nil, true, NoteColors.code())
+      end
+
+      -- Next line
+      ctx.y = ctx.y + line_h
     end
 
-    -- below the block
+    -- Position cursor below the block
     ctx.x = L.BODY_X
     ctx.y = rect_y + rect_h
   end
 
-  -- gap after block
   ctx.y = ctx.y + L.CODE_GAP_BOTTOM
 end
 
