@@ -7,10 +7,10 @@ return {
   notes_panel_size = 256,
   dock_mode = "right",
   fonts = {
-    regular = plugin_dir .. "/fonts/JetBrainsMono-Medium.ttf",
-    bold    = plugin_dir .. "/fonts/JetBrainsMono-Bold.ttf",
-    italic  = plugin_dir .. "/fonts/JetBrainsMono-MediumItalic.ttf",
-    code    = plugin_dir .. "/fonts/JetBrainsMono-Regular.ttf", 
+    regular = plugin_dir .. "/fonts/iAWriterQuattroS-Regular.ttf",
+    bold    = plugin_dir .. "/fonts/iAWriterQuattroS-Bold.ttf",
+    italic  = plugin_dir .. "/fonts/iAWriterQuattroS-Italic.ttf",
+    code    = plugin_dir .. "/fonts/iAWriterMonoS-Regular.ttf", 
     size    = 16,
   },
 }
