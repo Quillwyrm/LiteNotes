@@ -1,6 +1,6 @@
 ![Alt text](/logo.png)
 A lightweight markdown viewer and developer-notes system for [Lite XL](https://github.com/lite-xl/lite-xl).  
-It provides a **single dedicated notes panel** capable of:
+It provides a **Note View** capable of:
 
 
 - Per-project notes (stored externally)
