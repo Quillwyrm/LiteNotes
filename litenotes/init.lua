@@ -125,7 +125,7 @@ function NoteEditView:new(doc, kind)
 end
 
 function NoteEditView:get_name()
-  return get_view_title(self._litenotes_kind, "Edit: ", self.doc)
+  return get_view_title(self._litenotes_kind, "Edit:", self.doc)
 end
 
 function NoteEditView:update()
@@ -156,7 +156,7 @@ function NoteReadView:new(doc, kind)
 end
 
 function NoteReadView:get_name()
-  return get_view_title(self._litenotes_kind, "Note: ", self.doc)
+  return get_view_title(self._litenotes_kind, "Note:", self.doc)
 end
 
 -- Hook for LiteXL Core to determine vertical scroll limit
@@ -396,7 +396,7 @@ if core.status_view then
 
     get_item = function()
       return {
-        style.dim, style.font, "LiteNotes v0.1",
+        style.dim, style.font, "LiteNotes - Alpha : Goblin Jelly",
       }
     end
   })
@@ -418,5 +418,5 @@ contextmenu:register(function()
     and view.doc.filename
     and view.doc.filename:match("%.md$")
 end, {
-  { text = "Open in LiteNotes", command = "litenotes:note" }
+  { text = "Notes View", command = "litenotes:open note" }
 })

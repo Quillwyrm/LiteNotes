@@ -40,7 +40,9 @@ local SCALES = {
   CODE_GAP_BOTTOM   = 0.5,
   RULE_GAP_TOP      = 0.5,
   RULE_GAP_BOTTOM   = 0.5,
+
 }
+
 
 local L = {} -- Populated at runtime
 
