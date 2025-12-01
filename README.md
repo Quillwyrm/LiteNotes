@@ -29,9 +29,11 @@ It adds a dedicated “read mode” view for `.md` files and an optional per-pro
 - **Context menu integration**
   - Right-click in a `.md` `DocView` → “View Markdown” to open the same buffer in LiteMark.
     
-- **Markdown rendering in your editor!**
+
+## Example:
 
 ![LiteMark](Example.png)
+- **Markdown rendering in your editor!**
 
 ## Usage Guide:
 
