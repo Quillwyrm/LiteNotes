@@ -4,8 +4,6 @@ LiteMark is a lightweight Markdown reader and project-notes plugin for [Lite XL]
 
 It adds a dedicated “read mode” view for `.md` files and an optional per-project notes file, without changing how the core editor works.
 
----
-
 ## Features
 
 - **Markdown read view**
@@ -35,49 +33,6 @@ It adds a dedicated “read mode” view for `.md` files and an optional per-pro
   - [x] Productive
   - [x] Intuative
   - [x] *Really cool*
-
----
-
-## Markdown coverage
-
-LiteMark aims to cover the common, everyday Markdown you see in READMEs and notes, not the entire CommonMark + extensions ecosystem.
-
-**Block-level features:**
-
-- ATX headings: `#` through `######`
-- Paragraphs: separated by one or more blank lines
-- Unordered lists: `-`, `*`, or `+`
-- Ordered lists: `1.`, `2.`, …
-- Task lists: `- [ ]` and `- [x]`
-- Horizontal rules: `---`
-- Fenced code blocks: ```` ```lang ... ``` ```` with optional language label
-
-**Inline features:**
-
-- Bold: `**text**` or `__text__`
-- Italic: `*text*` or `_text_`
-- Inline code: `` `code` ``
-- Strikethrough: `~~text~~`
-
-Everything else is treated as plain text (still laid out nicely, just without special semantics).
-
----
-
-## Not (yet) supported
-
-These are intentionally **not** handled specially right now:
-
-- Setext headings (`Title` followed by `====` or `----`)
-- Links and autolinks: `[label](url)`, `<https://example.com>`
-- Images: `![alt](path.png)`
-- Tables
-- Blockquotes: `> quoted text`
-- Inline HTML blocks
-- Footnotes, math, admonitions, or other extension syntax
-
-If you use these, they will still render as readable text, just without special styling or layout.
-
----
 
 ## Usage
 
@@ -109,6 +64,44 @@ There is also an alias `litemark:note` which currently just delegates to “View
 
 - `LiteMark: View Project Notes` chooses a notes file based on the current project root and opens it in read mode.
 - Notes are stored under `USERDIR/project_notes/` using a sanitized project name, so they don’t clutter your project tree.
+
+## Markdown coverage
+
+LiteMark aims to cover the common, everyday Markdown you see in READMEs and notes, not the entire CommonMark + extensions ecosystem.
+
+**Block-level features:**
+
+- ATX headings: `#` through `######`
+- Paragraphs: separated by one or more blank lines
+- Unordered lists: `-`, `*`, or `+`
+- Ordered lists: `1.`, `2.`, …
+- Task lists: `- [ ]` and `- [x]`
+- Horizontal rules: `---`
+- Fenced code blocks: ```` ```lang ... ``` ```` with optional language label
+
+**Inline features:**
+
+- Bold: `**text**` or `__text__`
+- Italic: `*text*` or `_text_`
+- Inline code: `` `code` ``
+- Strikethrough: `~~text~~`
+
+Everything else is treated as plain text (still laid out nicely, just without special semantics).
+
+
+## Not (yet) supported
+
+These are intentionally **not** handled specially right now:
+
+- Setext headings (`Title` followed by `====` or `----`)
+- Links and autolinks: `[label](url)`, `<https://example.com>`
+- Images: `![alt](path.png)`
+- Tables
+- Blockquotes: `> quoted text`
+- Inline HTML blocks
+- Footnotes, math, admonitions, or other extension syntax
+
+If you use these, they will still render as readable text, just without special styling or layout.
 
 ---
 
