@@ -19,7 +19,7 @@ It adds a dedicated “read mode” view for `.md` files and an optional per-pro
   - Leaving the edit view automatically saves and returns to read mode.
 
 - **Code fences with syntax highlighting**
-  - ```lang code blocks are rendered with a shaded background.
+  - ````lang` code blocks are rendered with a shaded background.
   - If Lite XL has a syntax for the given `lang`, the code is tokenized and colored using `style.syntax[...]`.
 
 - **Custom status bar**
