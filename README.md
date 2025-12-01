@@ -31,7 +31,7 @@ It adds a dedicated “read mode” view for `.md` files and an optional per-pro
     
 - **Markdown rendering in your editor!**
 
-![LiteMark](example.png)
+!(example.png)
 
 ## Usage Guide:
 
