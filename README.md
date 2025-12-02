@@ -31,11 +31,12 @@ It adds a dedicated “read mode” view for `.md` files and an optional per-pro
     
 
 ## Example:
-![Demo](demo.gif)
 > **LiteMark is built to match your Lite XL theme seamlessly!**
+![Demo](demo.gif)
 
-![LiteMark](Example.png)
 > **Clean, Intuative and Simple Markdown rendering in your editor!**
+![LiteMark](Example.png)
+
 
 ## Usage Guide:
 
