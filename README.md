@@ -1,6 +1,6 @@
 ![LiteMark](logo.png)
 
-LiteMark is a lightweight Markdown reader and project-notes plugin for [Lite XL](https://github.com/lite-xl/lite-xl).
+LiteMark is a lightweight Markdown viewer and project-notes plugin for [Lite XL](https://github.com/lite-xl/lite-xl).
 
 It adds a dedicated “read mode” view for `.md` files and an optional per-project scratch-notes file.
 
