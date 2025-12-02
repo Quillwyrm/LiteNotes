@@ -40,7 +40,7 @@ This paragraph mixes **bold**, *italic*, ~~strikethrough~~, and `inline code` in
 
 ## Fenced Code Blocks (Lua)
 
-```lua
+```lua      
 local function foo(bar)
   -- Check for indentation handling
   if bar then
@@ -51,6 +51,7 @@ local function foo(bar)
   return false
 end
 ```
+
 ## Horizontal Rules
 - Header levels 1 and 2 have a thin rule.
 - Below is a rule created with `---` syntax.

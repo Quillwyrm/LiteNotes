@@ -65,7 +65,7 @@ local function open_or_create_doc()
 end
 
 local function get_view_title(kind, prefix, doc)
-  if kind == "markdown" then
+  if kind == "markdown" then    
     local name = doc and doc.filename and common.basename(doc.filename) or "Untitled"
     return prefix .. name
   else
