@@ -107,12 +107,13 @@ These are fearures are currently **not** supported by the LiteMark renderer:
 - Footnotes, math, admonitions, or other extension syntax
 
 If you use these, they will still render as readable text, just without special styling or layout.
+
+## Future Plans:
 More features to come in later releases including: 
-- interactive links (URL/Project file)
-- Table rendering
-- Images (from project dir)
-- Table of Contents Navigator
+- interactive links (URL/Project file).
+- Table rendering.
+- Images (from project dir).
+- Table of Contents Navigator.
 - and more!
 
----
 
