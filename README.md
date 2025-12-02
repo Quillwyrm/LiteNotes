@@ -4,12 +4,12 @@ LiteMark is a lightweight Markdown viewer and project-notes plugin for [Lite XL]
 
 It adds a dedicated “read mode” view for `.md` files and an optional per-project scratch-notes file.
 
-## Features:
+## Features
 
 - **Markdown read view**
   - View any `.md` file in a clean, styled Markdown window.
   - Uses Lite XL’s theme colors (`style.text`, `style.syntax[...]`) so it matches your current theme.
-  - Intuative. You can split, move and resize just like any Lite XL view. 
+  - Intuitive: you can split, move and resize LiteMark views just like any other Lite XL view.
 
 - **Read / Edit modes**
   - Double-click inside the read view to switch to a normal editor view for that document.
@@ -20,7 +20,7 @@ It adds a dedicated “read mode” view for `.md` files and an optional per-pro
   - Opened via a dedicated command, independent of whatever file you’re currently editing.
 
 - **Code fences with syntax highlighting**
-  - If LiteXL has a syntax for the given `lang`, the code is tokenized and colored.
+  - If Lite XL has a syntax for the given `lang`, the code is tokenized and colored.
   - Code blocks are rendered with a shaded background.
 
 - **Custom status bar**
@@ -31,17 +31,18 @@ It adds a dedicated “read mode” view for `.md` files and an optional per-pro
   - Right-click in a `.md` `DocView` → “View Markdown” to open the same buffer in LiteMark.
     
 
-## Example:
+## Examples
+
 > **LiteMark is built to match your Lite XL theme seamlessly!**
->  
+>
 ![Demo](demo.gif)
 
-> **Clean, Intuative and Simple Markdown rendering in your code editor!**
-> 
+> **Clean, intuitive and simple Markdown rendering in your editor.**
+>
 ![LiteMark](Example.png)
 
 
-## Usage Guide:
+## Usage Guide
 
 ### Commands
 
@@ -72,7 +73,7 @@ There is also an alias `litemark:note` which currently just delegates to “View
 - `LiteMark: View Project Notes` chooses a notes file based on the current project root and opens it in read mode.
 - Notes are stored under `USERDIR/project_notes/` using a sanitized project name, so they don’t clutter your project tree.
 
-## Markdown coverage:
+## Markdown coverage
 
 LiteMark aims to cover the common, everyday Markdown you see in READMEs and notes, not the entire CommonMark + extensions ecosystem.
 
@@ -95,13 +96,13 @@ LiteMark aims to cover the common, everyday Markdown you see in READMEs and note
 
 Everything else is treated as plain text (still laid out nicely, just without special semantics).
 
-## Not *(yet)* supported:
+## Not *(yet)* supported
 
-These are fearures are currently **not** supported by the LiteMark renderer:
+These features are currently **not** supported by the LiteMark renderer:
 
 - Setext headings (`Title` followed by `====` or `----`)
 - Links and autolinks: `[label](url)`, `<https://example.com>`
-- Images: `![alt](path.png)`
+- Images: `![alt](path.png)` (they render as plain text in LiteMark)
 - Tables
 - Blockquotes: `> quoted text`
 - Inline HTML blocks
@@ -109,12 +110,12 @@ These are fearures are currently **not** supported by the LiteMark renderer:
 
 If you use these, they will still render as readable text, just without special styling or layout.
 
-## Future Plans:
-More features to come in later releases including: 
-- interactive links (URL/Project file).
+## Future plans
+
+Planned features for later releases include:
+
+- Interactive links (URL / project file).
 - Table rendering.
 - Images (from project dir).
-- Table of Contents Navigator.
-- and more!
-
-
+- Table of contents navigator.
+- And more!
