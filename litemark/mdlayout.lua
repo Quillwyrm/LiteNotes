@@ -1,8 +1,10 @@
 local core    = require "core"
 local common  = require "core.common"
 local style   = require "core.style"
+local config  = require "core.config"
 local parser  = require "plugins.litemark.mdparse"
-local config  = require "plugins.litemark.config"
+
+local litemark_config = config.plugins.litemark
 
 -- SYNTAX HIGHLIGHTING DEPENDENCIES
 local tokenizer = require "core.tokenizer"
@@ -376,7 +378,7 @@ local function draw_header(ctx, block)
   local text_bottom = ctx.y + line_h
 
   -- Optional underline under H1/H2, spaced relative to header size.
-  if config.header_rules ~= false and level <= 2 then
+  if config.plugins.litemark.header_rules ~= false and level <= 2 then
     -- Fraction of header line height (e.g. 20%); ensures H1/H2 differ.
     local rule_gap = math.max(1, math.floor(line_h * 0.1))
 
@@ -436,7 +438,7 @@ local function draw_list(ctx, block, prev_block, next_block)
     local tw = math.floor(tick_font:get_width(tick_char))
     local th = tick_font:get_height()
     
-    local box_sz = math.floor(config.fonts.size)
+    local box_sz = math.floor(litemark_config.fonts.size)
     -- Make sure box width/height parity matches glyph width so the tick
     -- can be visually centered.
     if (box_sz % 2) ~= (tw % 2) then

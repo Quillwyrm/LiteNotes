@@ -7,17 +7,97 @@ local command = require "core.command"
 local common  = require "core.common"
 local style   = require "core.style"
 local system  = require "system"
+local config  = require "core.config"
 local View    = require "core.view"
 local DocView = require "core.docview"
-local StatusView = require "core.statusview" 
+local StatusView = require "core.statusview"
 
-
-local config  = require "plugins.litemark.config"
 local parser  = require "plugins.litemark.mdparse"
 local layout  = require "plugins.litemark.mdlayout"
 
--- 1. LOAD ASSETS
-layout.load_assets(config)
+----------------------------------------------------------------------
+-- 1. CONFIG (defaults + Settings UI)
+----------------------------------------------------------------------
+
+-- Where this plugin lives on disk (for bundled fonts)
+local plugin_dir = USERDIR .. "/plugins/litemark"
+
+-- Default LiteMark settings
+local litemark_defaults = {
+  single_project_notes_view = true,      -- reuse single view for project notes
+  split_mode       = "right",   -- where to split when opening a new panel
+  header_rules    = true,      -- draw underline under H1/H2
+
+  fonts = {
+    regular = plugin_dir .. "/fonts/iAWriterQuattroS-Regular.ttf",
+    bold    = plugin_dir .. "/fonts/iAWriterQuattroS-Bold.ttf",
+    italic  = plugin_dir .. "/fonts/iAWriterQuattroS-Italic.ttf",
+    code    = plugin_dir .. "/fonts/iAWriterMonoS-Regular.ttf",
+    size    = 14,
+  },
+}
+
+-- Merge defaults into config.plugins.litemark so users can override in user_settings.lua
+config.plugins.litemark = common.merge(litemark_defaults, config.plugins.litemark or {})
+local litemark_config = config.plugins.litemark
+
+-- Settings plugin integration (appears under Settings → Plugins → LiteMark)
+litemark_config.config_spec = {
+  name = "LiteMark",
+
+  {
+    label = "Single Project Notes View",
+    description = "Reuse a single LiteMark view for the per-project notes file.",
+    path = "single_project_notes_view",
+    type = "TOGGLE",
+  },
+  {
+    label = "Split Mode",
+    description = "Where to open LiteMark when creating a new panel (left/right/up/down).",
+    path = "split_mode",
+    type = "STRING",
+  },
+  {
+    label = "Header Rules (H1/H2)",
+    description = "Draw a thin horizontal rule under level-1 and level-2 headings.",
+    path = "header_rules",
+    type = "TOGGLE",
+  },
+  {
+    label = "Base Font Size",
+    description = "Base font size for LiteMark’s internal fonts.",
+    path = "fonts.size",
+    type = "NUMBER",
+  },
+  {
+    label = "Body Font Path",
+    description = "Path to the regular text font used by LiteMark.",
+    path = "fonts.regular",
+    type = "STRING",
+  },
+  {
+    label = "Bold Font Path",
+    description = "Path to the bold font used by LiteMark.",
+    path = "fonts.bold",
+    type = "STRING",
+  },
+  {
+    label = "Italic Font Path",
+    description = "Path to the italic font used by LiteMark.",
+    path = "fonts.italic",
+    type = "STRING",
+  },
+  {
+    label = "Code Font Path",
+    description = "Path to the monospace code font used by LiteMark.",
+    path = "fonts.code",
+    type = "STRING",
+  },
+}
+
+-- 2. LOAD ASSETS using merged config
+layout.load_assets(litemark_config)
+
 
 -- Forward declarations
 local NoteReadView, NoteEditView
@@ -125,7 +205,7 @@ function NoteEditView:new(doc, kind)
 end
 
 function NoteEditView:get_name()
-  return get_view_title(self._litemark_kind, "Edit:", self.doc)
+  return get_view_title(self._litemark_kind, "Edit: ", self.doc)
 end
 
 function NoteEditView:update()
@@ -156,7 +236,7 @@ function NoteReadView:new(doc, kind)
 end
 
 function NoteReadView:get_name()
-  return get_view_title(self._litemark_kind, "Note:", self.doc)
+  return get_view_title(self._litemark_kind, "Read: ", self.doc)
 end
 
 -- Hook for LiteXL Core to determine vertical scroll limit
@@ -184,16 +264,28 @@ end
 function NoteReadView:update_layout(force)
   local ver = self.doc:get_change_id()
   
-    -- Explicitly reserve space for the scrollbar gutter
+  -- Explicitly reserve space for the scrollbar gutter
   local gutter = style.scrollbar_size or 0
   local w = self.size.x - gutter
   
-  -- Theme Invalidation Check
+  -- Theme invalidation
   local theme_changed = (self._layout_bg ~= style.background2)
-  if not force and self._layout_ver == ver and self._layout_w == w and not theme_changed then return end
+
+  -- Header rule invalidation (toggle on/off)
+  local header_rules = litemark_config.header_rules ~= false
+  local header_rules_changed = (self._layout_header_rules ~= header_rules)
+
+  if not force
+    and self._layout_ver == ver
+    and self._layout_w == w
+    and not theme_changed
+    and not header_rules_changed
+  then
+    return
+  end
 
   if theme_changed then
-    layout.load_assets(config)
+    layout.load_assets(litemark_config)
     self._layout_bg = style.background2
   end
   
@@ -203,9 +295,11 @@ function NoteReadView:update_layout(force)
   -- Pass the reduced width to the layout engine
   self.display_list = layout.compute(blocks, w, { span_rules = self.span_rules })
   
-  self._layout_ver = ver
-  self._layout_w   = w
+  self._layout_ver           = ver
+  self._layout_w             = w
+  self._layout_header_rules  = header_rules
 end
+
 
 function NoteReadView:draw()
   self:draw_background(style.background2)
@@ -310,7 +404,7 @@ local function open_in_panel(view)
     core.set_active_view(view)
   else
     local active = core.root_view:get_active_node()
-    active:split(config.dock_mode or "right", view)
+    active:split(litemark_config.split_mode or "right", view)
     core.set_active_view(view)
   end
 end
@@ -325,7 +419,7 @@ command.add(nil, {
     local doc = open_or_create_doc()
     if not doc then return end
 
-    if config.singleton_notes then
+    if litemark_config.single_project_notes_view then
       local found = false
       walk_views(function(v)
         if v.doc == doc and is_litemark(v) then
@@ -431,6 +525,6 @@ return {
   NoteReadView = NoteReadView,
   NoteEditView = NoteEditView,
   layout = layout,
-  config = config,
+  config = litemark_config,
   parser = parser
 }
