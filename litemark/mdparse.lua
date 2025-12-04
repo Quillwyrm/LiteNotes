@@ -33,8 +33,8 @@ local t_insert  = table.insert
 -- PHASE 1: BLOCK HANDLERS
 -- -------------------------------------------------------------------------
 
-local function handle_fence_open(state, line, lang, c2, c3, line_idx)
-  state.in_code = true
+local function handle_code_open(state, line, lang, c2, c3, line_idx)
+  state.in_fence = "```"
   
   -- Normalize language: "Lua" -> "lua", empty -> nil
   local clean_lang = lang and lang:lower() or nil
@@ -100,7 +100,7 @@ local function handle_blank(state, line, _, _, _, line_idx)
   -- Paragraph handler will see last_was_blank == true and start a new block.
   state.last_was_blank = true
   -- If you want to auto-close code blocks on blank lines, do it here:
-  -- state.in_code = false
+  -- state.in_fence= false
 end
 
 
@@ -129,8 +129,8 @@ end
 -- PHASE 1 RULES (Block Priority)
 -- -------------------------------------------------------------------------
 
-local block_rules = {
-  { "^```%s*(%S*)",                    handle_fence_open     },
+local default_block_rules = {
+  { "^```%s*(%S*)",                     handle_code_open     },
   { "^(#+)%s+(.*)",                     handle_header         },
   { "^(%s*)(%d+)%.%s+(.*)",             handle_list_ordered   },
   { "^(%s*)([%-%*%+])%s+(.*)",          handle_list_unordered },
@@ -142,7 +142,7 @@ local block_rules = {
 -- PHASE 2 RULES (Span Priority)
 -- -------------------------------------------------------------------------
 
-local span_rules = {
+local default_span_rules = {
   { type = TOKENS.SPAN.CODE,   pattern = "(`+)(.-)%1",      content_idx = 2 },
   -- NEW: Bold+Italic (Must be before Bold/Italic)
   { type = TOKENS.SPAN.BOLD,   pattern = "%*%*%*(.-)%*%*%*", content_idx = 1 }, 
@@ -159,11 +159,11 @@ local span_rules = {
 
 -- parse_blocks(raw_text)
 -- Parse Markdown source into a flat list of block records.
-local function parse_blocks(raw_text)
+local function parse_blocks(raw_text, block_rules)
   local blocks = {}
   local state = {
     blocks         = blocks,
-    in_code        = false, -- true while inside ``` fenced blocks
+    in_fence       = false, -- true while inside ``` fenced blocks
     last_was_blank = false, -- true if the previous *non-code* line was blank
   }
 
@@ -178,15 +178,18 @@ local function parse_blocks(raw_text)
     -------------------------------------------------------------------------
     -- A. Inside fenced code: accumulate lines until closing fence
     -------------------------------------------------------------------------
-    if state.in_code then
-      if str_match(line, "^```") then
+    if state.in_fence then
+      local fence_blk = blocks[#blocks]
+      if str_match(line, "^" .. state.in_fence) then
         -- Closing fence: exit code mode, do not emit a block here
-        state.in_code = false
+        state.in_fence = false
+        if fence_blk and fence_blk.close then
+          fence_blk:close()
+        end
       else
         -- Still inside code: append raw line to the last CODE block's lines
-        local code_blk = blocks[#blocks]
-        if code_blk then
-          t_insert(code_blk.lines, line)
+        if fence_blk then
+          t_insert(fence_blk.lines, line)
         end
       end
 
@@ -197,7 +200,7 @@ local function parse_blocks(raw_text)
       local matched = false
 
       -- Try each block rule in order. The first one that matches wins.
-      for _, rule in ipairs(block_rules) do
+      for _, rule in ipairs(block_rules or default_block_rules) do
         -- One match call per rule; works for both captured and non-captured patterns.
         local c1, c2, c3 = str_match(line, rule[1])
         if c1 then
@@ -233,13 +236,13 @@ local function scan_next(text, rule, pos)
   return { s = s, e = e, text = content, type = rule.type, rule = rule }
 end
 
-local function parse_spans(text)
+local function parse_spans(text, span_rules)
   local tokens = {}
   local pos = 1
   local len = #text
 
   local next_matches = {}
-  for _, rule in ipairs(span_rules) do
+  for _, rule in ipairs(span_rules or default_span_rules) do
     local match = scan_next(text, rule, pos)
     if match then t_insert(next_matches, match) end
   end
@@ -292,6 +295,8 @@ end
 
 return {
   TOKENS       = TOKENS,
+  default_span_rules = default_span_rules,
+  default_block_rules  = default_block_rules,
   parse_blocks = parse_blocks,
   parse_spans  = parse_spans,
   handle_list_unordered = handle_list_unordered, 

@@ -198,10 +198,10 @@ function NoteReadView:update_layout()
   end
   
   local text = self.doc:get_text(1, 1, #self.doc.lines, #self.doc.lines[#self.doc.lines])
-  local blocks = parser.parse_blocks(text)
+  local blocks = parser.parse_blocks(text, self.block_rules)
   
   -- Pass the reduced width to the layout engine
-  self.display_list = layout.compute(blocks, w)
+  self.display_list = layout.compute(blocks, w, { span_rules = self.span_rules })
   
   self._layout_ver = ver
   self._layout_w   = w
@@ -249,6 +249,8 @@ function NoteReadView:draw()
         renderer.draw_text(cmd.font, cmd.text, ox + cmd.x, oy + cmd.y, cmd.color)
       elseif cmd.type == TYPE.RECT then
         renderer.draw_rect(ox + cmd.x, oy + cmd.y, cmd.w, cmd.h, cmd.color)
+      elseif cmd.type == TYPE.CANVAS then
+        renderer.draw_canvas(cmd.canvas, ox + cmd.x, oy + cmd.y)
       end
     end
   end
@@ -424,3 +426,11 @@ contextmenu:register(function()
 end, {
   { text = "View Markdown", command = "litemark:view current markdown" }
 })
+
+return {
+  NoteReadView = NoteReadView,
+  NoteEditView = NoteEditView,
+  layout = layout,
+  config = config,
+  parser = parser
+}

@@ -8,7 +8,7 @@ local config  = require "plugins.litemark.config"
 local tokenizer = require "core.tokenizer"
 local syntax    = require "core.syntax"
 
-local DRAW_MODE = { TEXT = 1, RECT = 2 }
+local DRAW_MODE = { TEXT = 1, RECT = 2, CANVAS = 3 }
 local BLOCK     = parser.TOKENS.BLOCK
 local SPAN      = parser.TOKENS.SPAN
 
@@ -188,7 +188,7 @@ local function line_layout(ctx, text, base_font_set, is_code_block, custom_color
     tokens = { { text = text, style = SPAN.NONE } }
   else
     -- Ask the markdown parser for inline spans (bold, italics, code, etc).
-    tokens = parser.parse_spans(text)
+    tokens = parser.parse_spans(text, ctx.span_rules)
   end
 
   for _, token in ipairs(tokens) do
@@ -633,14 +633,14 @@ local draw_ops = {
   [BLOCK.RULE]      = draw_rule,
 }
 
--- compute(blocks, max_width)
+-- compute(blocks, max_width, options)
 -- Main layout entry point.
 -- Walks the parsed block list and emits a flat list of drawing commands
 -- (text and rects), plus the overall document height and max content width.
-local function compute(blocks, max_width)
+local function compute(blocks, max_width, options)
   local draw_list = {}
 
-  local ctx = {
+  local ctx = common.merge({
     output     = draw_list,
     x          = 0,
     y          = L.VIEW_PADDING_TOP,
@@ -649,7 +649,7 @@ local function compute(blocks, max_width)
     max_seen_w = 0,
     indent     = 0,
     level      = 0,
-  }
+  }, options or {})
 
   for i = 1, #blocks do
     local block = blocks[i]
@@ -669,6 +669,8 @@ end
 
 return {
   DRAW_MODE   = DRAW_MODE,
+  L           = L,
+  draw_ops    = draw_ops,
   load_assets = load_assets,
   compute     = compute,
 }

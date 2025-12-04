@@ -2,6 +2,7 @@
   "addons": [{
     "id": "litemark",
     "name": "LiteMark",
+    "mod_version": "3",
     "description": "A markdown previewer.",
     "version": "0.1",
     "path": "litemark"
