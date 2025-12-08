@@ -4,7 +4,6 @@ local style   = require "core.style"
 local config  = require "core.config"
 local parser  = require "plugins.litemark.mdparse"
 
-local litemark_config = config.plugins.litemark
 
 -- SYNTAX HIGHLIGHTING DEPENDENCIES
 local tokenizer = require "core.tokenizer"
@@ -438,7 +437,7 @@ local function draw_list(ctx, block, prev_block, next_block)
     local tw = math.floor(tick_font:get_width(tick_char))
     local th = tick_font:get_height()
     
-    local box_sz = math.floor(litemark_config.fonts.size)
+    local box_sz = math.floor(config.plugins.litemark.fonts.size)
     -- Make sure box width/height parity matches glyph width so the tick
     -- can be visually centered.
     if (box_sz % 2) ~= (tw % 2) then
